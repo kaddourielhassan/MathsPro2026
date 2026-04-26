@@ -15,5 +15,5 @@ export default defineConfig({
       }
     })
   ],
-  base: './',
+  base: '/MathsPro2026/',
 })
