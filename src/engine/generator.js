@@ -1,4 +1,4 @@
-export const generateQuestion = (moduleId, level = 1) => {
+export const generateQuestion = (moduleId, level = 1, currentQ = 1) => {
   let q = "";
   let answer = 0;
   let options = [];
@@ -109,7 +109,11 @@ export const generateQuestion = (moduleId, level = 1) => {
     }
     case 'mult10': {
       const v = rand(2, 45);
-      const m = randEl([10, 100, 1000]);
+      let m;
+      if (currentQ <= 5) m = 10;
+      else if (currentQ <= 10) m = 100;
+      else m = 1000;
+      
       q = `${v} x ${m} = ?`;
       answer = String(v * m);
       astuce = `C'est une multiplication : ajoute autant de zéros qu'il y en a dans ${m}.`;
@@ -117,8 +121,13 @@ export const generateQuestion = (moduleId, level = 1) => {
       break;
     }
     case 'div10': {
-      const v = rand(2, 45) * 100;
-      const m = randEl([10, 100]);
+      let m;
+      if (currentQ <= 5) m = 10;
+      else if (currentQ <= 10) m = 100;
+      else m = 1000;
+      
+      const v = rand(2, 45) * m;
+      
       q = `${v} ÷ ${m} = ?`;
       answer = String(v / m);
       astuce = `C'est une division : barre autant de zéros qu'il y en a dans ${m}.`;

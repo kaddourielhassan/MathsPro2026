@@ -35,7 +35,7 @@ export default function Test() {
     setScore(0)
     setIsFinished(false)
     setTotalTimeMs(0)
-    setQuestionData(generateQuestion(moduleInfo.id, lvlKey === 'expert' ? 3 : lvlKey === 'confirme' ? 2 : 1))
+    setQuestionData(generateQuestion(moduleInfo.id, lvlKey === 'expert' ? 3 : lvlKey === 'confirme' ? 2 : 1, 1))
     setTimeLeft(LEVELS[lvlKey].time)
     startTimeRef.current = Date.now()
   }
@@ -72,22 +72,25 @@ export default function Test() {
        finalScore += 1;
     }
     
-    if (currentQ >= 10) {
+    const totalQuestions = (moduleInfo.id === 'mult10' || moduleInfo.id === 'div10') ? 15 : 10;
+    
+    if (currentQ >= totalQuestions) {
       const timeElapsed = Date.now() - startTimeRef.current
       setTotalTimeMs(timeElapsed)
       setIsFinished(true)
-      saveResults(finalScore, timeElapsed)
+      saveResults(finalScore, timeElapsed, totalQuestions)
     } else {
-      setCurrentQ(q => q + 1)
-      setQuestionData(generateQuestion(moduleInfo.id, level === 'expert' ? 3 : level === 'confirme' ? 2 : 1))
+      const nextQ = currentQ + 1;
+      setCurrentQ(nextQ)
+      setQuestionData(generateQuestion(moduleInfo.id, level === 'expert' ? 3 : level === 'confirme' ? 2 : 1, nextQ))
       setTimeLeft(LEVELS[level].time)
     }
   }
 
-  const saveResults = (finalScore, timeElapsed) => {
+  const saveResults = (finalScore, timeElapsed, totalQuestions) => {
     if (!activeProfile) return;
 
-    const accuracy = finalScore / 10
+    const accuracy = finalScore / totalQuestions
     const isValidated = accuracy >= 0.6 // Règle 60%
     const xpGained = finalScore * 12 + (isValidated ? 50 : 0) // Règle XP test
     
@@ -130,9 +133,10 @@ export default function Test() {
   }
 
   if (isFinished) {
-    const accuracy = Math.round((score / 10) * 100)
+    const totalQuestions = (moduleInfo.id === 'mult10' || moduleInfo.id === 'div10') ? 15 : 10;
+    const accuracy = Math.round((score / totalQuestions) * 100)
     const isValidated = accuracy >= 60
-    const avgTime = (totalTimeMs / 1000 / 10).toFixed(1)
+    const avgTime = (totalTimeMs / 1000 / totalQuestions).toFixed(1)
 
     return (
       <div className="max-w-xl mx-auto space-y-6 text-center">
@@ -142,7 +146,7 @@ export default function Test() {
            <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl">
                  <p className="text-sm text-slate-500">Score</p>
-                 <p className="text-2xl font-bold">{score}/10</p>
+                 <p className="text-2xl font-bold">{score}/{totalQuestions}</p>
               </div>
               <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl">
                  <p className="text-sm text-slate-500">Précision</p>
@@ -198,7 +202,7 @@ export default function Test() {
         </div>
         <div className="text-right">
           <span className="block text-xl font-bold">Score : <span className="text-indigo-600 dark:text-indigo-400">{score}</span> / {currentQ-1 > 0 ? currentQ-1 : 0}</span>
-          <span className="text-sm font-bold text-slate-500">Q. {currentQ}/10</span>
+          <span className="text-sm font-bold text-slate-500">Q. {currentQ}/{(moduleInfo.id === 'mult10' || moduleInfo.id === 'div10') ? 15 : 10}</span>
         </div>
       </div>
 
