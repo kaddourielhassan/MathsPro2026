@@ -125,10 +125,6 @@ export default function Accueil() {
                  </div>
                </div>
              )}
-
-             <div className="text-xs text-pink-400 font-bold text-left xl:text-right xl:pt-6 uppercase tracking-wider xl:ml-auto">
-               Conçue par<br/>M. El Kaddouri<br/>à l'aide de l'IA - 2026
-             </div>
           </div>
         </div>
 
@@ -255,6 +251,11 @@ export default function Accueil() {
           </div>
         </div>
       )}
+
+      {/* Signature */}
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 text-[10px] sm:text-xs text-pink-400/80 font-bold lowercase tracking-wider text-right pointer-events-none z-10">
+        conçue par m. el kaddouri<br/>à l'aide de l'ia - 2026
+      </div>
     </div>
   )
 }
