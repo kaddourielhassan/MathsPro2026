@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useProfileStore } from '../store/useProfileStore'
-import { Zap, UserPlus, Gamepad2, Ghost, Flame, Crosshair, Bot, Headphones, Sparkles, Rocket } from 'lucide-react'
+import { Zap, UserPlus, Gamepad2, Ghost, Flame, Crosshair, Bot, Headphones, Sparkles, Rocket, QrCode } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 
 // Avatars ciblés "Ados/Gamers" 12-16 ans (plus "cool" que de simples emojis)
 const ADO_AVATARS = [
@@ -25,6 +26,11 @@ export default function Accueil() {
   const [isCreating, setIsCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newClasse, setNewClasse] = useState('')
+  const [currentUrl, setCurrentUrl] = useState('')
+
+  useEffect(() => {
+    setCurrentUrl(window.location.origin + window.location.pathname)
+  }, [])
 
   const handleCreate = () => {
     if (newName.trim() === '') return
@@ -92,12 +98,30 @@ export default function Accueil() {
             </li>
           </ul>
 
-          <div className="flex items-center gap-8 pt-8">
+          <div className="flex flex-col xl:flex-row items-start xl:items-center gap-6 pt-8">
              <div className="bg-[#f1f5f9] px-6 py-4 rounded-xl text-sm max-w-[280px]">
                 <strong className="text-slate-800 block mb-1">🔒 Mode Hors-ligne</strong>
                 <span className="text-slate-500 font-medium">Toutes les données restent sauvegardées localement.</span>
              </div>
-             <div className="text-xs text-pink-400 font-bold text-right pt-6 uppercase tracking-wider">
+
+             {currentUrl && (
+               <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+                 <div className="bg-white p-1 rounded-lg border border-slate-50">
+                   <QRCodeSVG value={currentUrl} size={72} level="L" />
+                 </div>
+                 <div>
+                   <strong className="text-slate-800 flex items-center gap-1.5 text-sm mb-0.5">
+                     <QrCode className="w-4 h-4 text-[#5a48e7]" /> 
+                     Flashe-moi !
+                   </strong>
+                   <span className="text-slate-500 font-medium text-xs max-w-[140px] block leading-tight">
+                     Connecte-toi depuis ton smartphone ou ta tablette
+                   </span>
+                 </div>
+               </div>
+             )}
+
+             <div className="text-xs text-pink-400 font-bold text-left xl:text-right xl:pt-6 uppercase tracking-wider xl:ml-auto">
                Conçue par<br/>M. El Kaddouri<br/>à l'aide de l'IA - 2026
              </div>
           </div>
