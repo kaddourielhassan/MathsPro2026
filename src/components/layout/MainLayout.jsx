@@ -113,7 +113,7 @@ export default function MainLayout() {
       <footer className="py-8 mt-auto text-center border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 flex flex-col items-center justify-center gap-2">
           <p className="text-sm font-bold text-slate-400 flex items-center justify-center gap-2">
-             <Shield className="h-4 w-4" /> 100% Hors-ligne. Conçu par M. EL KADDOURI - 2026
+             <Shield className="h-4 w-4" /> 100% Hors-ligne. Conçu par M. EL KADDOURI à l'aide de l'IA - 2026
           </p>
         </div>
       </footer>

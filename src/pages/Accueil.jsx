@@ -252,10 +252,6 @@ export default function Accueil() {
         </div>
       )}
 
-      {/* Signature */}
-      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 text-[10px] sm:text-xs text-pink-400/80 font-bold tracking-wider text-right pointer-events-none z-10">
-        100% Hors-ligne. Conçu par M. EL KADDOURI à l'aide de l'IA - 2026
-      </div>
     </div>
   )
 }
