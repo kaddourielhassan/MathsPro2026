@@ -49,7 +49,7 @@ export const generatePDF = (profile, precisionGlobale) => {
   const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
   doc.setFontSize(10);
   doc.setTextColor(150, 150, 150);
-  doc.text("Conception : M. EL KADDOURI avec l'aide de l'IA — 2026", 20, pageHeight - 10);
+  doc.text("100% Hors-ligne. Conçu par M. EL KADDOURI à l'aide de l'IA - 2026", 20, pageHeight - 10);
 
   doc.save(`MathsPro_Bilan_${profile.prenomOuPseudo}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
@@ -63,9 +63,10 @@ export const generateAttestationPdf = (profile) => {
   
   doc.setFontSize(12);
   doc.setTextColor(50, 50, 50);
-  doc.text(`Identité élève (local) : ${profile.prenomOuPseudo}`, 20, 35);
+  doc.text(`Élève : ${profile.prenomOuPseudo}`, 20, 35);
   doc.text(`Date : ${new Date().toLocaleDateString()}`, 140, 35);
-  doc.text(`L'élève justifie avoir travaillé sur l'application MathsPro et obtenu les résultats suivants :`, 20, 45, { maxWidth: 170 });
+  doc.text(`Classe : ${profile.classe ? profile.classe : 'Non spécifiée'}`, 20, 42);
+  doc.text(`L'élève justifie avoir travaillé sur l'application MathsPro et obtenu les résultats suivants :`, 20, 52, { maxWidth: 170 });
 
   const tableData = [];
   MODULES_CATALOG.forEach(mod => {
@@ -73,17 +74,18 @@ export const generateAttestationPdf = (profile) => {
     const tries = hist.length;
     if (tries > 0) {
       const valid = hist.filter(h => h.validation).length > 0;
-      tableData.push([mod.title, valid ? "Validé" : "En cours d'acquisition"]);
+      let acc = Math.round(hist.reduce((a,b)=>a+b.score,0)/(tries*10)*100) + "%";
+      tableData.push([mod.title, acc, valid ? "Validé" : "En cours d'acquisition"]);
     }
   });
 
   if (tableData.length === 0) {
-    tableData.push(["Aucun module travaillé", "-"]);
+    tableData.push(["Aucun module travaillé", "-", "-"]);
   }
 
   doc.autoTable({
-    startY: 55,
-    head: [['Module Pédagogique', 'Validation']],
+    startY: 62,
+    head: [['Module Pédagogique', 'Réussite (%)', 'Statut']],
     body: tableData,
     theme: 'striped',
     headStyles: { fillColor: [217, 119, 6] }
@@ -96,7 +98,7 @@ export const generateAttestationPdf = (profile) => {
   const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
   doc.setFontSize(10);
   doc.setTextColor(150, 150, 150);
-  doc.text("Conception : M. EL KADDOURI avec l'aide de l'IA — 2026", 20, pageHeight - 10);
+  doc.text("100% Hors-ligne. Conçu par M. EL KADDOURI à l'aide de l'IA - 2026", 20, pageHeight - 10);
 
   doc.save(`MathsPro_Attestation_${profile.prenomOuPseudo}_${new Date().toISOString().split('T')[0]}.pdf`);
 }
