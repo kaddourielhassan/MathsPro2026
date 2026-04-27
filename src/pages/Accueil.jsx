@@ -27,6 +27,7 @@ export default function Accueil() {
   const [newName, setNewName] = useState('')
   const [newClasse, setNewClasse] = useState('')
   const [currentUrl, setCurrentUrl] = useState('')
+  const [isQrExpanded, setIsQrExpanded] = useState(false)
 
   useEffect(() => {
     setCurrentUrl(window.location.origin + window.location.pathname)
@@ -105,7 +106,11 @@ export default function Accueil() {
              </div>
 
              {currentUrl && (
-               <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md transition-shadow">
+               <div 
+                 className="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 hover:shadow-md hover:border-[#5a48e7]/50 transition-all cursor-pointer"
+                 onClick={() => setIsQrExpanded(true)}
+                 title="Cliquez pour agrandir le QR Code"
+               >
                  <div className="bg-white p-1 rounded-lg border border-slate-50">
                    <QRCodeSVG value={currentUrl} size={72} level="L" />
                  </div>
@@ -220,6 +225,36 @@ export default function Accueil() {
         </div>
 
       </div>
+
+      {/* QR Code Expanded Modal */}
+      {isQrExpanded && currentUrl && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 backdrop-blur-sm p-4 animate-in fade-in"
+          onClick={() => setIsQrExpanded(false)}
+        >
+          <div 
+            className="bg-white p-10 rounded-[2.5rem] shadow-2xl max-w-lg w-full text-center flex flex-col items-center transform transition-transform animate-in zoom-in-95"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-3xl font-black text-slate-800 mb-2 flex items-center gap-3 justify-center">
+              <QrCode className="w-8 h-8 text-[#5a48e7]" />
+              Flashez pour rejoindre
+            </h3>
+            <p className="text-slate-500 font-medium text-base mb-8">
+              Scannez ce QR Code depuis votre tablette ou smartphone.
+            </p>
+            <div className="bg-white p-6 rounded-3xl shadow-sm border-2 border-slate-100 inline-block mb-8">
+              <QRCodeSVG value={currentUrl} size={350} level="M" />
+            </div>
+            <button 
+              onClick={() => setIsQrExpanded(false)}
+              className="w-full py-4 rounded-xl font-bold text-white bg-slate-800 hover:bg-slate-700 transition-colors text-lg"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
