@@ -7,7 +7,7 @@ import { CLASSES_LYCEE } from '../data/classes'
 import { hashString, generateSalt, verifyHash } from '../lib/crypto'
 import { 
   FileDown, Download, Trash2, AlertTriangle, Lock, Key, 
-  Filter, CheckCircle2, UserPlus, Sparkles, ShieldCheck, LogOut 
+  Filter, CheckCircle2, UserPlus, Sparkles, ShieldCheck, LogOut, Upload 
 } from 'lucide-react'
 
 export default function DashboardEnseignant() {
@@ -17,6 +17,7 @@ export default function DashboardEnseignant() {
   const deleteAllProfiles = useProfileStore(state => state.deleteAllProfiles)
   const deleteProfile = useProfileStore(state => state.deleteProfile)
   const updateProfile = useProfileStore(state => state.updateProfile)
+  const importFullState = useProfileStore(state => state.importFullState)
 
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false)
   const [adminInput, setAdminInput] = useState('')
@@ -93,6 +94,43 @@ export default function DashboardEnseignant() {
       updateProfile(selectedProfile.id, { pinHash: null, pinSalt: null })
       alert("PIN réinitialisé.")
     }
+  }
+
+  const handleExportBackup = () => {
+    const data = {
+      profiles,
+      adminSettings,
+      version: 3,
+      exportedAt: new Date().toISOString()
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `MathsPro_Backup_${new Date().toISOString().split('T')[0]}.json`
+    link.click()
+  }
+
+  const handleImportBackup = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result)
+        if (!data.profiles || !data.adminSettings) {
+          throw new Error("Format de fichier invalide.")
+        }
+        if (window.confirm("⚠️ ATTENTION : L'importation remplacera TOUTES les données actuelles de cet ordinateur. Continuer ?")) {
+          importFullState(data)
+          alert("Sauvegarde restaurée avec succès !")
+          window.location.reload() // Recharger pour rafraîchir tout le store
+        }
+      } catch (err) {
+        alert("Erreur lors de l'importation : " + err.message)
+      }
+    }
+    reader.readAsText(file)
   }
 
   // Sécurité anti-crash : Si adminSettings est absent (problème store)
@@ -183,6 +221,17 @@ export default function DashboardEnseignant() {
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
+          <button onClick={handleExportBackup} className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-indigo-100 text-indigo-700 hover:border-indigo-500 rounded-2xl font-black shadow-sm transition-all active:scale-95" title="Télécharger une sauvegarde complète (JSON)">
+             <Download className="h-5 w-5" />
+             Backup JSON
+          </button>
+          
+          <label className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-slate-100 text-slate-700 hover:border-slate-400 rounded-2xl font-black shadow-sm transition-all cursor-pointer active:scale-95" title="Restaurer une sauvegarde depuis un fichier">
+             <Upload className="h-5 w-5" />
+             Restaurer
+             <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
+          </label>
+
           <button onClick={() => generateCSV(profiles)} className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-indigo-100 text-indigo-700 hover:border-indigo-500 rounded-2xl font-black shadow-sm transition-all active:scale-95">
              <Download className="h-5 w-5" />
              CSV Global

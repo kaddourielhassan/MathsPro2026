@@ -89,6 +89,13 @@ export const useProfileStore = create(
           codeSalt: salt,
           isInitialized: true
         }
+      }),
+
+      // Import/Export complet (Migration/Backup)
+      importFullState: (newState) => set({
+        profiles: newState.profiles || [],
+        activeProfileId: newState.activeProfileId || null,
+        adminSettings: newState.adminSettings || { isInitialized: false, codeHash: null, codeSalt: null }
       })
     }),
     {
