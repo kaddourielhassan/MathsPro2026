@@ -91,17 +91,20 @@ export default function Test() {
     if (!activeProfile) return;
 
     const accuracy = finalScore / totalQuestions
-    const isValidated = accuracy >= 0.6 // Règle 60%
-    const xpGained = finalScore * 12 + (isValidated ? 50 : 0) // Règle XP test
-    
+    const isValidated = accuracy >= 0.6 // Règle 60% — seuil de validation officiel
+    const xpGained = finalScore * 12 + (isValidated ? 50 : 0)
+
     const session = {
       date: new Date().toISOString(),
       moduleId: moduleInfo.id,
       mode: 'test',
+      niveau: level,                    // 'debutant' | 'confirme' | 'expert'
       score: finalScore,
-      validation: isValidated
+      totalQuestions: totalQuestions,
+      dureeMs: timeElapsed,
+      validation: isValidated,
     }
-    
+
     const currentHistory = activeProfile.historique || []
     const newBadges = [...(activeProfile.badges || [])]
     if (isValidated && !newBadges.includes(`${moduleInfo.id}_valide`)) {
@@ -111,7 +114,7 @@ export default function Test() {
     updateProfile(activeProfile.id, {
       xpTotal: activeProfile.xpTotal + xpGained,
       badges: newBadges,
-      historique: [session, ...currentHistory].slice(0, 50) 
+      historique: [session, ...currentHistory].slice(0, 100)
     })
   }
 

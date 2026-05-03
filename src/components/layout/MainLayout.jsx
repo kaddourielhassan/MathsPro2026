@@ -1,28 +1,21 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import { Outlet, Link, useNavigate } from 'react-router-dom'
 import { Shield, Brain, Moon, Type, LogOut, GraduationCap, Hexagon } from 'lucide-react'
 import { useProfileStore } from '../../store/useProfileStore'
+import { useAppStore } from '../../store/useAppStore'
 
 export default function MainLayout() {
   const activeProfile = useProfileStore((state) => state.getActiveProfile())
   const setActiveProfile = useProfileStore((state) => state.setActiveProfile)
   const navigate = useNavigate()
   
-  const [isDarkMode, setIsDarkMode] = useState(false)
-  const [isDysMode, setIsDysMode] = useState(false)
+  const theme = useAppStore(state => state.theme)
+  const setTheme = useAppStore(state => state.setTheme)
+  const isDysMode = useAppStore(state => state.dyslexie)
+  const toggleDysMode = useAppStore(state => state.toggleDyslexie)
 
-  // Gestion basique du Dark Mode
   const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode)
-    if (!isDarkMode) document.documentElement.classList.add('dark')
-    else document.documentElement.classList.remove('dark')
-  }
-
-  // Gestion du mode Dyslexie
-  const toggleDysMode = () => {
-    setIsDysMode(!isDysMode)
-    if (!isDysMode) document.body.classList.add('dyslexia-mode')
-    else document.body.classList.remove('dyslexia-mode')
+    setTheme(theme === 'sombre' ? 'clair' : 'sombre')
   }
 
   const handleLogout = () => {

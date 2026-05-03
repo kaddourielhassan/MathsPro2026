@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useProfileStore } from '../store/useProfileStore'
-import { Zap, UserPlus, Gamepad2, Ghost, Flame, Crosshair, Bot, Headphones, Sparkles, Rocket, QrCode } from 'lucide-react'
+import { Zap, UserPlus, Gamepad2, Ghost, Flame, Crosshair, Bot, Headphones, Sparkles, Rocket, QrCode, Filter, Lock, ShieldCheck } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
+import { CLASSES_LYCEE } from '../data/classes'
+import { hashString, generateSalt, verifyHash } from '../lib/crypto'
 
 // Avatars ciblés "Ados/Gamers" 12-16 ans (plus "cool" que de simples emojis)
 const ADO_AVATARS = [
@@ -26,6 +28,9 @@ export default function Accueil() {
   const [isCreating, setIsCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newClasse, setNewClasse] = useState('')
+  const [usePin, setUsePin] = useState(false)
+  const [newPin, setNewPin] = useState('')
+  const [filterClasse, setFilterClasse] = useState('')
   const [currentUrl, setCurrentUrl] = useState('')
   const [isQrExpanded, setIsQrExpanded] = useState(false)
 
@@ -33,13 +38,29 @@ export default function Accueil() {
     setCurrentUrl(window.location.origin + window.location.pathname)
   }, [])
 
-  const handleCreate = () => {
+  const filteredProfiles = profiles.filter(p => !filterClasse || p.classe === filterClasse)
+
+  const handleCreate = async () => {
     if (newName.trim() === '') return
+    if (usePin && newPin.length !== 4) {
+      alert("Le PIN doit comporter 4 chiffres.")
+      return
+    }
+
+    let pinHash = null
+    let pinSalt = null
+    if (usePin) {
+      pinSalt = generateSalt()
+      pinHash = await hashString(newPin, pinSalt)
+    }
+
     const avatarIndex = Math.floor(Math.random() * ADO_AVATARS.length)
     const id = createProfile({ 
       prenomOuPseudo: newName.trim(), 
-      classe: newClasse.trim(),
-      avatar: avatarIndex 
+      classe: newClasse,
+      avatar: avatarIndex,
+      pinHash,
+      pinSalt
     })
     setActiveProfile(id)
     navigate('/modules')
@@ -130,13 +151,28 @@ export default function Accueil() {
 
         {/* Colonne droite : Profils */}
         <div className="bg-white p-8 sm:p-10 rounded-[2.5rem] card-shadow border border-slate-100/50 w-full max-w-md mx-auto lg:mr-0 relative z-10">
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <h2 className="text-2xl font-black text-slate-900 mb-2">Qui es-tu ?</h2>
-            <p className="text-slate-500 font-medium text-sm">Choisis ton profil (ton pseudo / prénom) pour continuer</p>
+            <p className="text-slate-500 font-medium text-sm mb-4">Choisis ton profil pour continuer</p>
+            
+            {/* Filtre par classe */}
+            <div className="flex items-center gap-2 bg-slate-100 p-2 rounded-xl border border-slate-200">
+              <Filter className="h-4 w-4 text-slate-400 ml-1" />
+              <select 
+                value={filterClasse}
+                onChange={(e) => setFilterClasse(e.target.value)}
+                className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 w-full cursor-pointer"
+              >
+                <option value="">Toutes les classes</option>
+                {CLASSES_LYCEE.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="space-y-3 mb-6 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-            {profiles.map(p => {
+          <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            {filteredProfiles.map(p => {
               const avatarObj = ADO_AVATARS[p.avatar % ADO_AVATARS.length] || ADO_AVATARS[0]
               const Icon = avatarObj.icon
               const isActive = activeProfile?.id === p.id
@@ -153,7 +189,10 @@ export default function Accueil() {
                   <div className="flex-1">
                     <h3 className="font-bold text-slate-800 text-lg flex justify-between items-center">
                       {p.prenomOuPseudo}
-                      {isActive && <span className="text-[10px] uppercase tracking-widest bg-[#5a48e7] text-white px-2 py-0.5 rounded-full">Actif</span>}
+                      <div className="flex items-center gap-1.5">
+                        {p.pinHash && <Lock className="h-3 w-3 text-slate-400" />}
+                        {isActive && <span className="text-[10px] uppercase tracking-widest bg-[#5a48e7] text-white px-2 py-0.5 rounded-full">Actif</span>}
+                      </div>
                     </h3>
                     <p className="text-xs font-semibold text-slate-500">Niv. {p.niveau} • {p.classe ? p.classe : 'Élève'}</p>
                   </div>
@@ -161,9 +200,9 @@ export default function Accueil() {
               )
             })}
             
-            {profiles.length === 0 && !isCreating && (
+            {filteredProfiles.length === 0 && (
                <div className="text-center py-8 text-slate-400 font-medium border-2 border-dashed border-slate-200 rounded-2xl">
-                 Aucun profil trouvé
+                 {filterClasse ? `Aucun profil en ${filterClasse}` : 'Aucun profil trouvé'}
                </div>
             )}
           </div>
@@ -174,38 +213,64 @@ export default function Accueil() {
                 type="text" 
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && newName.trim() && document.getElementById('input-classe').focus()}
                 placeholder="Ton pseudo ou prénom"
                 autoFocus
-                className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-[#5a48e7] outline-none font-bold bg-white focus:shadow-sm"
+                className="w-full p-3.5 rounded-xl border-2 border-slate-200 focus:border-[#5a48e7] outline-none font-bold bg-white focus:shadow-sm"
               />
-              <input 
-                id="input-classe"
-                type="text" 
+              
+              <select 
                 value={newClasse}
                 onChange={(e) => setNewClasse(e.target.value)}
-                placeholder="Ta classe (optionnel, ex: 3ème A)"
-                onKeyDown={(e) => {
-                   if (e.key === 'Enter') {
-                      e.preventDefault()
-                      handleCreate()
-                   }
-                }}
-                className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-[#5a48e7] outline-none font-bold bg-white focus:shadow-sm"
-              />
-              <div className="flex gap-2 pt-2">
+                className="w-full p-3.5 rounded-xl border-2 border-slate-200 focus:border-[#5a48e7] outline-none font-bold bg-white focus:shadow-sm cursor-pointer"
+              >
+                <option value="">Sélectionne ta classe</option>
+                {CLASSES_LYCEE.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+
+              <div className="bg-white p-3 rounded-xl border border-slate-200">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={usePin}
+                    onChange={(e) => setUsePin(e.target.checked)}
+                    className="h-5 w-5 rounded border-slate-300 text-[#5a48e7] focus:ring-[#5a48e7]"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                      <Lock className="h-3.5 w-3.5" /> Protéger par PIN
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-medium leading-tight">Optionnel - 4 chiffres pour ton attestation</p>
+                  </div>
+                </label>
+
+                {usePin && (
+                  <input 
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                    placeholder="Code à 4 chiffres"
+                    className="w-full mt-3 p-3 rounded-lg border-2 border-indigo-100 focus:border-indigo-400 outline-none text-center font-black tracking-[1em] bg-indigo-50/30"
+                  />
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-1">
                 <button 
-                  onClick={() => { setIsCreating(false); setNewName(''); setNewClasse(''); }}
-                  className="flex-1 p-3 rounded-xl font-bold text-slate-500 bg-slate-200 hover:bg-slate-300 transition-colors"
+                  onClick={() => { setIsCreating(false); setNewName(''); setNewClasse(''); setUsePin(false); setNewPin(''); }}
+                  className="flex-1 p-3 rounded-xl font-bold text-slate-500 bg-slate-200 hover:bg-slate-300 transition-colors text-sm"
                 >
                   Annuler
                 </button>
                 <button 
                   onClick={handleCreate}
-                  disabled={!newName.trim()}
-                  className="flex-1 p-3 rounded-xl font-bold text-white bg-[#5a48e7] hover:bg-[#4b3aca] disabled:opacity-50 transition-colors"
+                  disabled={!newName.trim() || !newClasse || (usePin && newPin.length !== 4)}
+                  className="flex-1 p-3 rounded-xl font-bold text-white bg-[#5a48e7] hover:bg-[#4b3aca] disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-md"
                 >
-                  Créer
+                  Créer mon profil
                 </button>
               </div>
             </div>

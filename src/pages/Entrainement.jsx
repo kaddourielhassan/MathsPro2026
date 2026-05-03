@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { CheckCircle2, XCircle, Flame, ArrowRight, Zap, Target } from 'lucide-react'
 import { MODULES_CATALOG } from '../data/modules/catalog'
@@ -20,6 +20,8 @@ export default function Entrainement() {
   const [selectedOption, setSelectedOption] = useState(null)
   const [showFeedback, setShowFeedback] = useState(false)
   const [isFinished, setIsFinished] = useState(false)
+  
+  const sessionStartRef = useRef(Date.now())
 
   useEffect(() => {
     if(!questionData && !isFinished) {
@@ -43,11 +45,23 @@ export default function Entrainement() {
   }
 
   const handleNext = () => {
-    if (currentQ >= 10) { 
+    if (currentQ >= 10) {
       setIsFinished(true)
       if (activeProfile) {
+        const session = {
+          date: new Date().toISOString(),
+          moduleId: moduleInfo.id,
+          mode: 'entrainement',
+          niveau: 'libre',           // l'entraînement n'a pas de niveau au sens du Test
+          score: score,
+          totalQuestions: 10,
+          dureeMs: Date.now() - sessionStartRef.current,
+          validation: false,         // l'entraînement ne valide jamais un module
+        }
+        const currentHistory = activeProfile.historique || []
         updateProfile(activeProfile.id, {
-          xpTotal: activeProfile.xpTotal + sessionXP
+          xpTotal: activeProfile.xpTotal + sessionXP,
+          historique: [session, ...currentHistory].slice(0, 100),
         })
       }
     } else {
@@ -84,9 +98,20 @@ export default function Entrainement() {
              <Link to={`/modules/${moduleInfo.id}`} className="px-8 py-4 bg-white dark:bg-slate-800 font-bold text-lg rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700 hover:shadow-lg transition-all border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200">
                Retour au module
              </Link>
-             <button onClick={() => {
-                setScore(0); setCurrentQ(1); setStreak(0); setSessionXP(0); setIsFinished(false); setQuestionData(null); setShowFeedback(false); setSelectedOption(null);
-             }} className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-lg rounded-2xl shadow-[0_10px_20px_rgba(79,70,229,0.3)] hover:shadow-[0_15px_30px_rgba(79,70,229,0.5)] hover:-translate-y-1 transition-all">
+             <button 
+               onClick={() => {
+                 setScore(0); 
+                 setCurrentQ(1); 
+                 setStreak(0); 
+                 setSessionXP(0); 
+                 setIsFinished(false); 
+                 setQuestionData(null); 
+                 setShowFeedback(false); 
+                 setSelectedOption(null);
+                 sessionStartRef.current = Date.now();
+               }} 
+               className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-lg rounded-2xl shadow-[0_10px_20px_rgba(79,70,229,0.3)] hover:shadow-[0_15px_30px_rgba(79,70,229,0.5)] hover:-translate-y-1 transition-all"
+             >
                Rejouer la session
              </button>
            </div>

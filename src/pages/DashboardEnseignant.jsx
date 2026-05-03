@@ -1,141 +1,321 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useProfileStore } from '../store/useProfileStore'
 import { generateCSV } from '../utils/csvGenerator'
 import { generateAttestationPdf } from '../utils/pdfGenerator'
 import { MODULES_CATALOG } from '../data/modules/catalog'
-import { FileDown, Download, Trash2, AlertTriangle } from 'lucide-react'
+import { CLASSES_LYCEE } from '../data/classes'
+import { hashString, generateSalt, verifyHash } from '../lib/crypto'
+import { FileDown, Download, Trash2, AlertTriangle, Lock, Key, Filter, CheckCircle2, XCircle, ShieldCheck } from 'lucide-react'
 
 export default function DashboardEnseignant() {
   const profiles = useProfileStore(state => state.profiles)
+  const adminSettings = useProfileStore(state => state.adminSettings)
+  const initAdminCode = useProfileStore(state => state.initAdminCode)
+  const updateAdminCode = useProfileStore(state => state.updateAdminCode)
   const deleteAllProfiles = useProfileStore(state => state.deleteAllProfiles)
   const deleteProfile = useProfileStore(state => state.deleteProfile)
-  const [selectedProfile, setSelectedProfile] = useState(null)
+  const updateProfile = useProfileStore(state => state.updateProfile)
 
-  const handleGlobalReset = () => {
-    const currentYear = new Date().getFullYear().toString();
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false)
+  const [adminInput, setAdminInput] = useState('')
+  const [error, setError] = useState('')
+  
+  const [selectedProfile, setSelectedProfile] = useState(null)
+  const [filterClasse, setFilterClasse] = useState('')
+
+  // Filtrage
+  const filteredProfiles = profiles.filter(p => !filterClasse || p.classe === filterClasse)
+
+  // -- LOGIQUE ADMIN --
+
+  const handleAdminInit = async () => {
+    if (adminInput.length !== 6) {
+      setError("Le code doit comporter 6 chiffres.")
+      return
+    }
+    const salt = generateSalt()
+    const hash = await hashString(adminInput, salt)
+    initAdminCode(hash, salt)
+    setIsAdminLoggedIn(true)
+    setAdminInput('')
+    setError('')
+  }
+
+  const handleAdminLogin = async () => {
+    const isValid = await verifyHash(adminInput, adminSettings.codeSalt, adminSettings.codeHash)
+    if (isValid) {
+      setIsAdminLoggedIn(true)
+      setAdminInput('')
+      setError('')
+    } else {
+      setError("Code incorrect.")
+    }
+  }
+
+  const handleGlobalReset = async () => {
     if (window.confirm("⚠️ ATTENTION : Voulez-vous vraiment supprimer TOUS les profils ?")) {
-      const code = window.prompt("Entrez le code d'accès prof à 4 chiffres (contactez le référent numérique de l'établissement pour l'obtenir) :");
-      if (code === currentYear) {
-        deleteAllProfiles()
-        setSelectedProfile(null)
-        alert("Tous les profils ont été supprimés avec succès.");
-      } else if (code !== null) {
-        alert("Code incorrect. Opération annulée.");
-      }
+       deleteAllProfiles()
+       setSelectedProfile(null)
+       alert("Tous les profils ont été supprimés.")
     }
   }
 
   const handleDeleteIndividual = () => {
-    const currentYear = new Date().getFullYear().toString();
     if (!selectedProfile) return
     if (window.confirm(`Voulez-vous vraiment supprimer le profil de ${selectedProfile.prenomOuPseudo} ?`)) {
-      const code = window.prompt("Entrez le code d'accès prof à 4 chiffres (contactez le référent numérique de l'établissement pour l'obtenir) :");
-      if (code === currentYear) {
-        deleteProfile(selectedProfile.id)
-        setSelectedProfile(null)
-      } else if (code !== null) {
-        alert("Code incorrect. Opération annulée.");
-      }
+      deleteProfile(selectedProfile.id)
+      setSelectedProfile(null)
     }
   }
 
+  const handleResetPin = () => {
+    if (!selectedProfile) return
+    if (window.confirm(`Réinitialiser le PIN de ${selectedProfile.prenomOuPseudo} ? L'élève pourra en définir un nouveau.`)) {
+      updateProfile(selectedProfile.id, { pinHash: null, pinSalt: null })
+      alert("PIN réinitialisé.")
+    }
+  }
+
+  // Ecran d'initialisation (Premier lancement)
+  if (!adminSettings.isInitialized) {
+    return (
+      <div className="max-w-md mx-auto py-20 px-4">
+        <div className="glass-card p-10 rounded-[2.5rem] border-2 border-indigo-100 text-center space-y-6">
+          <div className="h-20 w-20 bg-indigo-100 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+            <ShieldCheck className="h-10 w-10" />
+          </div>
+          <h1 className="text-3xl font-black text-slate-900">Initialisation Admin</h1>
+          <p className="text-slate-500 font-medium leading-relaxed">
+            C'est la première fois que vous accédez à cet espace sur cet ordinateur. Choisissez un <strong className="text-indigo-600">code à 6 chiffres</strong> pour protéger les actions sensibles (suppression, purge).
+          </p>
+          <div className="space-y-4">
+            <input 
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={adminInput}
+              onChange={(e) => setAdminInput(e.target.value.replace(/\D/g, ''))}
+              placeholder="Code à 6 chiffres"
+              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-indigo-500 outline-none text-center font-black tracking-[1em] text-2xl bg-slate-50"
+            />
+            {error && <p className="text-red-500 font-bold text-sm animate-bounce">{error}</p>}
+            <button 
+              onClick={handleAdminInit}
+              className="w-full py-4 bg-indigo-600 text-white font-black text-lg rounded-xl shadow-lg hover:bg-indigo-700 transition-all active:scale-95"
+            >
+              Définir le code maître
+            </button>
+          </div>
+          <p className="text-xs text-slate-400">Note : Ce code est stocké localement sur ce navigateur.</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Ecran de connexion
+  if (!isAdminLoggedIn) {
+    return (
+      <div className="max-w-md mx-auto py-20 px-4">
+        <div className="glass-card p-10 rounded-[2.5rem] border-2 border-slate-200 text-center space-y-6 shadow-xl">
+          <div className="h-16 w-16 bg-slate-100 text-slate-600 rounded-2xl flex items-center justify-center mx-auto">
+            <Lock className="h-8 w-8" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900">Espace Sécurisé</h1>
+          <p className="text-slate-500 font-medium">Entrez le code maître à 6 chiffres pour accéder aux fonctions d'administration.</p>
+          <div className="space-y-4">
+            <input 
+              type="password"
+              inputMode="numeric"
+              maxLength={6}
+              value={adminInput}
+              onChange={(e) => setAdminInput(e.target.value.replace(/\D/g, ''))}
+              placeholder="••••••"
+              autoFocus
+              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-slate-500 outline-none text-center font-black tracking-[1em] text-2xl bg-slate-50"
+              onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
+            />
+            {error && <p className="text-red-500 font-bold text-sm">{error}</p>}
+            <button 
+              onClick={handleAdminLogin}
+              className="w-full py-4 bg-slate-800 text-white font-black text-lg rounded-xl shadow-lg hover:bg-slate-900 transition-all active:scale-95"
+            >
+              Déverrouiller
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // -- TABLEAU DE BORD ADMIN --
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between sm:items-end mb-8 gap-4">
-        <h1 className="text-3xl font-extrabold tracking-tight">Espace Enseignant / Moodle</h1>
-        <div className="flex items-center gap-3">
-          <button onClick={() => generateCSV(profiles)} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-xl font-bold shadow-sm dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-300 transition-colors">
-             <Download className="h-4 w-4" />
-             Exporter CSV (Global)
+    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+      <div className="flex flex-col lg:flex-row justify-between lg:items-end mb-8 gap-4">
+        <div>
+           <div className="flex items-center gap-3 mb-1">
+             <span className="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Admin</span>
+             <h1 className="text-4xl font-black text-slate-900 tracking-tight">Espace Pédagogique</h1>
+           </div>
+           <p className="text-slate-500 font-medium">Gestion des élèves et exports institutionnels Lycée Alfred Sauvy</p>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          <button onClick={() => generateCSV(profiles)} className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-indigo-100 text-indigo-700 hover:border-indigo-500 rounded-2xl font-black shadow-sm transition-all active:scale-95">
+             <Download className="h-5 w-5" />
+             CSV Global
           </button>
-          <button onClick={handleGlobalReset} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 rounded-xl font-bold shadow-sm dark:bg-red-900/30 dark:border-red-800 dark:text-red-400 transition-colors">
-             <AlertTriangle className="h-4 w-4" />
-             Tout Purger
+          <button onClick={handleGlobalReset} className="flex items-center justify-center gap-2 px-6 py-3 bg-red-50 border-2 border-red-100 text-red-600 hover:bg-red-100 rounded-2xl font-black shadow-sm transition-all active:scale-95">
+             <AlertTriangle className="h-5 w-5" />
+             Purger TOUT
+          </button>
+          <button onClick={() => setIsAdminLoggedIn(false)} className="p-3 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-colors" title="Se déconnecter de l'admin">
+             <Lock className="h-5 w-5" />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
          {/* List */}
-         <div className="md:col-span-1 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[600px]">
-            <div className="p-5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-               <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                 Profils locaux
-                 <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full dark:bg-indigo-900 dark:text-indigo-300">{profiles.length}</span>
+         <div className="lg:col-span-4 bg-white dark:bg-slate-800 rounded-[2rem] shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[700px]">
+            <div className="p-6 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 space-y-4">
+               <h2 className="font-black text-slate-900 dark:text-slate-100 flex items-center justify-between text-xl">
+                 Profils Élèves
+                 <span className="text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full dark:bg-indigo-900 dark:text-indigo-300">{filteredProfiles.length}</span>
                </h2>
+
+               {/* Filtre classe */}
+               <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <Filter className="h-4 w-4 text-slate-400" />
+                  <select 
+                    value={filterClasse}
+                    onChange={(e) => setFilterClasse(e.target.value)}
+                    className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 dark:text-slate-300 w-full cursor-pointer"
+                  >
+                    <option value="">Toutes les classes</option>
+                    {CLASSES_LYCEE.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+               </div>
             </div>
-            <ul className="divide-y divide-slate-100 dark:divide-slate-700 overflow-y-auto">
-               {profiles.length > 0 ? profiles.map(p => {
+
+            <ul className="divide-y divide-slate-100 dark:divide-slate-700 overflow-y-auto custom-scrollbar">
+               {filteredProfiles.length > 0 ? filteredProfiles.map(p => {
                  return (
-                   <li key={p.id} className={`p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${selectedProfile?.id === p.id ? 'bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 pl-3' : 'border-l-4 border-transparent'}`} onClick={() => setSelectedProfile(p)}>
-                      <h3 className="font-bold font-lg text-slate-900 dark:text-slate-100">{p.prenomOuPseudo}</h3>
-                      <p className="text-xs text-slate-500 font-medium">Niv {Math.max(1, Math.floor(p.xpTotal/500)+1)} • {p.xpTotal} XP</p>
+                   <li 
+                    key={p.id} 
+                    className={`p-5 cursor-pointer hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors flex items-center gap-4 ${selectedProfile?.id === p.id ? 'bg-indigo-50/50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 pl-4' : 'border-l-4 border-transparent'}`} 
+                    onClick={() => setSelectedProfile(p)}
+                   >
+                      <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center font-bold text-slate-500">
+                        {p.prenomOuPseudo[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-slate-900 dark:text-slate-100">{p.prenomOuPseudo}</h3>
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{p.classe}</p>
+                      </div>
+                      {p.pinHash && <Lock className="h-3.5 w-3.5 text-slate-300" />}
                    </li>
                  )
                }) : (
-                 <li className="p-6 text-center text-sm text-slate-500 italic">Aucun profil enregistré sur cette machine.</li>
+                 <li className="p-12 text-center text-slate-400 font-medium italic">
+                    {filterClasse ? "Aucun élève trouvé dans cette classe." : "Aucun profil enregistré."}
+                 </li>
                )}
             </ul>
          </div>
 
          {/* Detail */}
-         <div className="md:col-span-2">
+         <div className="lg:col-span-8">
             {selectedProfile ? (
-               <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 sm:p-8 space-y-6">
-                  <div className="flex items-center gap-5">
-                     <div className="h-16 w-16 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex flex-shrink-0 items-center justify-center text-3xl font-bold text-white shadow-inner">
-                        {selectedProfile.prenomOuPseudo[0].toUpperCase()}
-                     </div>
-                     <div>
-                        <h2 className="text-2xl font-bold">{selectedProfile.prenomOuPseudo}</h2>
-                        <p className="text-slate-500 text-sm font-medium">Dernière activité : {(selectedProfile.historique && selectedProfile.historique.length > 0) ? new Date(selectedProfile.historique[0].date).toLocaleDateString() : 'Aucune session complétée'}</p>
-                     </div>
+               <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-200 dark:border-slate-700 p-8 sm:p-10 space-y-8 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                    <div className="flex items-center gap-6">
+                       <div className="h-20 w-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex flex-shrink-0 items-center justify-center text-4xl font-black text-white shadow-lg">
+                          {selectedProfile.prenomOuPseudo[0].toUpperCase()}
+                       </div>
+                       <div>
+                          <div className="flex items-center gap-3">
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">{selectedProfile.prenomOuPseudo}</h2>
+                            <span className="px-3 py-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full text-xs font-black uppercase tracking-widest">{selectedProfile.classe}</span>
+                          </div>
+                          <p className="text-slate-500 text-sm font-medium mt-1">Dernière activité : {(selectedProfile.historique && selectedProfile.historique.length > 0) ? new Date(selectedProfile.historique[0].date).toLocaleDateString() : 'Aucune session'}</p>
+                       </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button onClick={handleDeleteIndividual} className="p-4 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition-colors" title="Supprimer définitivement">
+                        <Trash2 className="h-6 w-6" />
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                     <div className="p-5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 flex flex-col justify-between">
-                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">Bilan Moodle / VS</p>
-                        <div className="flex flex-col gap-2 mt-auto">
-                           <button onClick={() => generateAttestationPdf(selectedProfile)} className="w-full py-2.5 bg-amber-500 text-white font-bold rounded-lg hover:bg-amber-600 shadow-sm flex items-center justify-center gap-2 transition-transform active:scale-95">
-                              <FileDown className="h-4 w-4" />
-                              Attestation Vie Scolaire
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                     <div className="p-6 bg-slate-50 dark:bg-slate-900 rounded-[1.5rem] border border-slate-100 dark:border-slate-800 space-y-4">
+                        <p className="text-xs text-slate-400 font-black uppercase tracking-[0.2em]">Actions Administratives</p>
+                        <div className="flex flex-col gap-3">
+                           <button onClick={() => generateAttestationPdf(selectedProfile)} className="w-full py-3.5 bg-amber-500 text-white font-black rounded-xl hover:bg-amber-600 shadow-md flex items-center justify-center gap-2 transition-transform active:scale-95">
+                              <FileDown className="h-5 w-5" />
+                              Bilan Pédagogique (PDF)
                            </button>
-                           <button onClick={handleDeleteIndividual} className="w-full py-2 border-2 border-red-500 text-red-500 font-bold rounded-lg hover:bg-red-50 hover:text-red-600 shadow-sm flex items-center justify-center gap-2 transition-transform active:scale-95">
-                              <Trash2 className="h-4 w-4" />
-                              Supprimer le Profil
-                           </button>
+                           {selectedProfile.pinHash && (
+                             <button onClick={handleResetPin} className="w-full py-3 border-2 border-indigo-200 text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 flex items-center justify-center gap-2 transition-all">
+                                <Key className="h-4 w-4" />
+                                Réinitialiser le PIN élève
+                             </button>
+                           )}
                         </div>
                      </div>
-                     <div className="p-5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
-                        <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Modules</p>
-                        <p className="text-3xl font-black text-slate-800 dark:text-slate-100">{(selectedProfile.badges || []).length} <span className="text-lg font-medium text-slate-400">Validés</span></p>
+                     <div className="p-6 bg-indigo-600 text-white rounded-[1.5rem] shadow-xl shadow-indigo-200 dark:shadow-none relative overflow-hidden">
+                        <Sparkles className="absolute -top-4 -right-4 h-24 w-24 text-white/10 rotate-12" />
+                        <p className="text-xs text-white/70 font-black uppercase tracking-[0.2em] mb-1">Score Global</p>
+                        <p className="text-5xl font-black">{selectedProfile.xpTotal} <span className="text-xl font-medium text-white/60">XP</span></p>
+                        <p className="mt-4 text-sm font-bold bg-white/20 inline-block px-3 py-1 rounded-full">Niveau {Math.max(1, Math.floor(selectedProfile.xpTotal/500)+1)}</p>
                      </div>
                   </div>
 
                   <div>
-                     <h3 className="font-bold text-lg mb-4 border-b border-slate-200 dark:border-slate-700 pb-2">Suivi par module</h3>
-                     <div className="space-y-3">
-                        {MODULES_CATALOG.filter(mod => selectedProfile.historique?.some(h=>h.moduleId === mod.id)).map(mod => {
-                           const hist = selectedProfile.historique.filter(h=>h.moduleId === mod.id)
+                     <h3 className="font-black text-xl mb-6 flex items-center gap-3">
+                        <CheckCircle2 className="h-6 w-6 text-green-500" />
+                        Suivi des Modules
+                     </h3>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {MODULES_CATALOG.map(mod => {
+                           const hist = (selectedProfile.historique || []).filter(h=>h.moduleId === mod.id)
                            const tries = hist.length
                            const valid = hist.some(h=>h.validation)
-                           const acc = Math.round(hist.reduce((a,b)=>a+b.score,0)/(tries*10)*100)
+                           
+                           if (tries === 0) return null
+
                            return (
-                             <div key={mod.id} className="flex justify-between items-center text-sm p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-lg">
-                                <span className={`font-bold ${valid ? 'text-green-700 dark:text-green-400' : 'text-slate-700 dark:text-slate-300'}`}>{mod.title}</span>
-                                <span className="font-mono bg-slate-100 dark:bg-slate-900 px-3 py-1 rounded-md font-bold text-slate-700 dark:text-slate-300">{acc}% {valid && '✅'}</span>
+                             <div key={mod.id} className="flex justify-between items-center p-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm rounded-2xl hover:border-indigo-200 transition-colors">
+                                <div>
+                                  <p className="font-bold text-slate-800 dark:text-slate-200 leading-tight">{mod.title}</p>
+                                  <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{tries} session(s)</p>
+                                </div>
+                                <div className={`flex items-center gap-2 font-black px-3 py-1 rounded-lg ${valid ? 'bg-green-50 text-green-600' : 'bg-slate-50 text-slate-500'}`}>
+                                   {valid ? 'ACQUIS' : 'EN COURS'}
+                                </div>
                              </div>
                            )
                         })}
                         {(selectedProfile.historique?.length === 0 || !selectedProfile.historique) && (
-                           <p className="text-slate-500 italic flex items-center justify-center p-8 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">Aucun travail enregistré.</p>
+                           <div className="col-span-2 text-slate-400 italic py-12 text-center bg-slate-50 dark:bg-slate-900 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                             Aucun module travaillé pour le moment.
+                           </div>
                         )}
                      </div>
                   </div>
                </div>
             ) : (
-               <div className="h-full min-h-[300px] border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 rounded-2xl flex items-center justify-center p-8 text-center text-slate-500">
-                  <p className="max-w-sm">Sélectionnez un profil à gauche pour visualiser son dossier et générer une attestation pour Moodle ou la Vie Scolaire.</p>
+               <div className="h-full min-h-[500px] border-2 border-dashed border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 rounded-[3rem] flex items-center justify-center p-12 text-center text-slate-400">
+                  <div className="max-w-sm space-y-4">
+                    <div className="h-20 w-20 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-6">
+                       <UserPlus className="h-10 w-10 text-slate-200" />
+                    </div>
+                    <p className="text-lg font-bold text-slate-600 dark:text-slate-400">Sélectionnez un profil pour agir</p>
+                    <p className="text-sm font-medium">Vous pourrez générer les attestations pour Moodle/VS, réinitialiser des codes ou supprimer des comptes.</p>
+                  </div>
                </div>
             )}
          </div>
