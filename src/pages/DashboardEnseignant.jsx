@@ -197,6 +197,20 @@ export default function DashboardEnseignant() {
         </div>
       </div>
 
+      <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[2rem] flex flex-col md:flex-row items-center gap-6 animate-in slide-in-from-top-4">
+        <div className="h-14 w-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+          <AlertTriangle className="h-8 w-8" />
+        </div>
+        <div className="flex-1 text-center md:text-left">
+          <h3 className="text-amber-900 font-black text-lg">Attention : Persistance des données</h3>
+          <p className="text-amber-800 text-sm font-medium leading-relaxed">
+            Les profils sont stockés <strong>uniquement sur cet ordinateur</strong>. 
+            Vider le cache du navigateur ou effacer les données de site <strong>supprimera définitivement</strong> tous les comptes élèves. 
+            Pensez à exporter régulièrement vos résultats en CSV.
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
          {/* Colonne Gauche : Liste des Profils */}
          <div className="lg:col-span-4 bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col max-h-[700px]">

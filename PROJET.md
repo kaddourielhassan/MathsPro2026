@@ -11,6 +11,7 @@ MathsPro est une application web conçue pour le **Lycée Professionnel Alfred S
 ## 2. Architecture et Souveraineté des Données
 - **100% Offline** : L'application ne nécessite aucune connexion internet après le chargement initial.
 - **Zustand Persistence** : Les profils et l'historique sont stockés exclusivement dans le `localStorage` du navigateur de la machine locale.
+- **Risque de Maintenance** : Attention ! Le nettoyage manuel du cache ou des données de site par les services techniques supprimera l'intégralité des données élèves sur le poste concerné.
 - **Confidentialité** : Aucun tracking, aucune donnée n'est transmise à des serveurs tiers.
 
 ## 3. Gouvernance et Sécurité (Livrable 3)
