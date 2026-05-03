@@ -20,15 +20,17 @@ export default function DashboardEnseignant() {
   const importFullState = useProfileStore(state => state.importFullState)
 
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false)
+  const [adminRole, setAdminRole] = useState(null) // 'full' ou 'restricted'
   const [adminInput, setAdminInput] = useState('')
   const [error, setError] = useState('')
   
   const [selectedProfile, setSelectedProfile] = useState(null)
   const [filterClasse, setFilterClasse] = useState('')
 
-  // Filtrage sécurisé
+  // Filtrage sécurisé (on cache le profil enseignant de la liste pour éviter la confusion)
   const filteredProfiles = profiles.filter(p => {
     if (!p) return false
+    if (p.isTeacher) return false // Ne pas s'auto-afficher dans la gestion
     return !filterClasse || p.classe === filterClasse
   })
 
@@ -59,14 +61,28 @@ export default function DashboardEnseignant() {
         setError("Données admin corrompues.")
         return
       }
-      const isValid = await verifyHash(adminInput, adminSettings.codeSalt, adminSettings.codeHash)
-      if (isValid) {
+      
+      // 1. Check Master Code (Full Access)
+      const isMaster = await verifyHash(adminInput, adminSettings.codeSalt, adminSettings.codeHash)
+      if (isMaster) {
+        setAdminRole('full')
         setIsAdminLoggedIn(true)
         setAdminInput('')
         setError('')
-      } else {
-        setError("Code incorrect.")
+        return
       }
+
+      // 2. Check Teacher Delegate Code (Current Year - Restricted Access)
+      const currentYear = new Date().getFullYear().toString()
+      if (adminInput === currentYear) {
+        setAdminRole('restricted')
+        setIsAdminLoggedIn(true)
+        setAdminInput('')
+        setError('')
+        return
+      }
+
+      setError("Code incorrect.")
     } catch (err) {
       console.error(err)
       setError("Erreur technique lors de la vérification.")
@@ -211,7 +227,9 @@ export default function DashboardEnseignant() {
       <div className="flex flex-col lg:flex-row justify-between lg:items-end mb-8 gap-4 px-2">
         <div>
            <div className="flex items-center gap-3 mb-1">
-             <span className="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Admin</span>
+             <span className={`text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${adminRole === 'full' ? 'bg-indigo-600' : 'bg-amber-500'}`}>
+               {adminRole === 'full' ? 'Administrateur' : 'Enseignant Délégué'}
+             </span>
              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Espace Pédagogique</h1>
            </div>
            <p className="text-slate-500 font-medium">Gestion des élèves — Lycée Alfred Sauvy</p>
@@ -222,30 +240,36 @@ export default function DashboardEnseignant() {
              <Download className="h-5 w-5" />
              Backup JSON
           </button>
-          
-          <label className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-slate-100 text-slate-700 hover:border-slate-400 rounded-2xl font-black shadow-sm transition-all cursor-pointer active:scale-95" title="Restaurer une sauvegarde depuis un fichier">
-             <Upload className="h-5 w-5" />
-             Restaurer
-             <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
-          </label>
 
           <button onClick={() => generateCSV(profiles)} className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-indigo-100 text-indigo-700 hover:border-indigo-500 rounded-2xl font-black shadow-sm transition-all active:scale-95">
              <Download className="h-5 w-5" />
              CSV Global
           </button>
-          <button onClick={handleGlobalReset} className="flex items-center justify-center gap-2 px-6 py-3 bg-red-50 border-2 border-red-100 text-red-600 hover:bg-red-100 rounded-2xl font-black shadow-sm transition-all active:scale-95">
-             <AlertTriangle className="h-5 w-5" />
-             Purger Tout
-          </button>
-          <button onClick={() => {
-            const newCode = window.prompt("Entrez le nouveau code maître :")
-            if (newCode && newCode.length >= 4) {
-              handleAdminInit(newCode) // Je vais adapter handleAdminInit pour accepter un paramètre
-              alert("Code maître mis à jour.")
-            }
-          }} className="p-3 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-colors" title="Modifier le code maître">
-             <Key className="h-5 w-5" />
-          </button>
+          
+          {adminRole === 'full' && (
+            <>
+              <label className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-slate-100 text-slate-700 hover:border-slate-400 rounded-2xl font-black shadow-sm transition-all cursor-pointer active:scale-95" title="Restaurer une sauvegarde depuis un fichier">
+                 <Upload className="h-5 w-5" />
+                 Restaurer
+                 <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />
+              </label>
+
+              <button onClick={handleGlobalReset} className="flex items-center justify-center gap-2 px-6 py-3 bg-red-50 border-2 border-red-100 text-red-600 hover:bg-red-100 rounded-2xl font-black shadow-sm transition-all active:scale-95">
+                 <AlertTriangle className="h-5 w-5" />
+                 Purger Tout
+              </button>
+              
+              <button onClick={() => {
+                const newCode = window.prompt("Entrez le nouveau code maître :")
+                if (newCode && newCode.length >= 4) {
+                  handleAdminInit(newCode)
+                  alert("Code maître mis à jour.")
+                }
+              }} className="p-3 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-colors" title="Modifier le code maître">
+                 <Key className="h-5 w-5" />
+              </button>
+            </>
+          )}
           <button onClick={() => setIsAdminLoggedIn(false)} className="p-3 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-colors" title="Se déconnecter">
              <LogOut className="h-5 w-5" />
           </button>
@@ -339,11 +363,13 @@ export default function DashboardEnseignant() {
                        </div>
                     </div>
 
-                    <div className="flex gap-2">
-                      <button onClick={handleDeleteIndividual} className="p-4 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition-colors">
-                        <Trash2 className="h-6 w-6" />
-                      </button>
-                    </div>
+                    {adminRole === 'full' && (
+                      <div className="flex gap-2">
+                        <button onClick={handleDeleteIndividual} className="p-4 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition-colors">
+                          <Trash2 className="h-6 w-6" />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -354,7 +380,7 @@ export default function DashboardEnseignant() {
                               <FileDown className="h-5 w-5" />
                               Bilan Pédagogique (PDF)
                            </button>
-                           {selectedProfile.pinHash && (
+                           {adminRole === 'full' && selectedProfile.pinHash && (
                              <button onClick={handleResetPin} className="w-full py-3 border-2 border-indigo-200 text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 flex items-center justify-center gap-2 transition-all">
                                 <Key className="h-4 w-4" />
                                 Réinitialiser le PIN
