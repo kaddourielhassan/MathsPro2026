@@ -4,7 +4,23 @@ import { persist } from 'zustand/middleware'
 export const useProfileStore = create(
   persist(
     (set, get) => ({
-      profiles: [],
+      profiles: [
+        {
+          id: 'admin-prof-id',
+          prenomOuPseudo: 'ENSEIGNANT (Test)',
+          classe: 'Personnel',
+          avatar: 0,
+          dateCreation: new Date().toISOString(),
+          preferencesAffichage: { theme: 'clair', dyslexie: false, son: true },
+          niveau: 1,
+          xpTotal: 0,
+          badges: [],
+          historique: [],
+          isTeacher: true, // Flag spécial
+          pinHash: 'DYNAMIC', // Indicateur pour le code dynamique
+          pinSalt: 'DYNAMIC'
+        }
+      ],
       activeProfileId: null,
       adminSettings: {
         codeHash: null,

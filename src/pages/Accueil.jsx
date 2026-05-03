@@ -33,6 +33,11 @@ export default function Accueil() {
   const [filterClasse, setFilterClasse] = useState('')
   const [currentUrl, setCurrentUrl] = useState('')
   const [isQrExpanded, setIsQrExpanded] = useState(false)
+  
+  const [showPinModal, setShowPinModal] = useState(false)
+  const [selectedProfileForPin, setSelectedProfileForPin] = useState(null)
+  const [pinInput, setPinInput] = useState('')
+  const [pinError, setPinError] = useState('')
 
   useEffect(() => {
     setCurrentUrl(window.location.origin + window.location.pathname)
@@ -66,9 +71,38 @@ export default function Accueil() {
     navigate('/modules')
   }
 
-  const handleSelect = (id) => {
-    setActiveProfile(id)
-    navigate('/modules')
+  const handleSelect = (profile) => {
+    if (profile.pinHash) {
+      setSelectedProfileForPin(profile)
+      setShowPinModal(true)
+    } else {
+      setActiveProfile(profile.id)
+      navigate('/modules')
+    }
+  }
+
+  const handleVerifyPin = async () => {
+    if (!selectedProfileForPin) return
+
+    let isValid = false
+    
+    // Cas spécial Enseignant : PIN dynamique (année en cours)
+    if (selectedProfileForPin.isTeacher) {
+      const currentYear = new Date().getFullYear().toString()
+      isValid = pinInput === currentYear
+    } else {
+      isValid = await verifyHash(pinInput, selectedProfileForPin.pinSalt, selectedProfileForPin.pinHash)
+    }
+
+    if (isValid) {
+      setActiveProfile(selectedProfileForPin.id)
+      navigate('/modules')
+      setShowPinModal(false)
+      setPinInput('')
+      setPinError('')
+    } else {
+      setPinError("Code incorrect.")
+    }
   }
 
   return (
@@ -180,7 +214,7 @@ export default function Accueil() {
               return (
                 <button 
                   key={p.id}
-                  onClick={() => handleSelect(p.id)}
+                  onClick={() => handleSelect(p)}
                   className={`w-full flex items-center gap-4 p-4 rounded-2xl border transition-all text-left group ${isActive ? 'border-[#5a48e7] bg-indigo-50/50 shadow-sm' : 'border-slate-200 hover:border-[#5a48e7] hover:shadow-md bg-white'}`}
                 >
                   <div className={`h-12 w-12 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform ${avatarObj.bg} ${avatarObj.color}`}>
@@ -314,6 +348,41 @@ export default function Accueil() {
               Fermer
             </button>
           </div>
+        </div>
+      )}
+
+
+      {/* PIN Modal pour sélection de profil protégé */}
+      {showPinModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in">
+           <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl max-w-sm w-full text-center space-y-6 border-2 border-indigo-100">
+              <div className="h-16 w-16 bg-indigo-50 text-[#5a48e7] rounded-2xl flex items-center justify-center mx-auto">
+                 <Lock className="h-8 w-8" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-slate-900">Profil Protégé</h3>
+                <p className="text-slate-500 font-medium mt-1">Saisis le code PIN pour accéder à ce profil.</p>
+              </div>
+              <div className="space-y-4">
+                <input 
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+                  placeholder="••••"
+                  autoFocus
+                  className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-[#5a48e7] outline-none text-center font-black tracking-[1em] text-3xl bg-slate-50"
+                  onKeyDown={(e) => e.key === 'Enter' && handleVerifyPin()}
+                />
+                {pinError && <p className="text-red-500 font-bold text-sm animate-bounce">{pinError}</p>}
+                
+                <div className="flex gap-2">
+                   <button onClick={() => { setShowPinModal(false); setPinInput(''); setPinError(''); }} className="flex-1 py-4 font-bold text-slate-500 bg-slate-200 rounded-xl hover:bg-slate-300 transition-all">Annuler</button>
+                   <button onClick={handleVerifyPin} className="flex-1 py-4 font-black text-white bg-[#5a48e7] rounded-xl hover:bg-[#4b3aca] transition-all shadow-lg">Entrer</button>
+                </div>
+              </div>
+           </div>
         </div>
       )}
 
