@@ -31,6 +31,5 @@ export const CLASSES_LYCEE = [
   'TPAR',
   'TTBAA',
   'TTBEE',
-  'TTMA',
-  'Autre / Personnel'
+  'TTMA'
 ]
