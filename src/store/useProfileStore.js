@@ -112,7 +112,34 @@ export const useProfileStore = create(
         profiles: newState.profiles || [],
         activeProfileId: newState.activeProfileId || null,
         adminSettings: newState.adminSettings || { isInitialized: false, codeHash: null, codeSalt: null }
-      })
+      }),
+
+      // Garantir la présence du profil enseignant
+      ensureTeacherProfile: () => {
+        const { profiles } = get()
+        if (!profiles.some(p => p.isTeacher)) {
+          set({
+            profiles: [
+              {
+                id: 'admin-prof-id',
+                prenomOuPseudo: 'ENSEIGNANT (Test)',
+                classe: 'Personnel',
+                avatar: 0,
+                dateCreation: new Date().toISOString(),
+                preferencesAffichage: { theme: 'clair', dyslexie: false, son: true },
+                niveau: 1,
+                xpTotal: 0,
+                badges: [],
+                historique: [],
+                isTeacher: true,
+                pinHash: 'DYNAMIC',
+                pinSalt: 'DYNAMIC'
+              },
+              ...profiles
+            ]
+          })
+        }
+      }
     }),
     {
       name: 'mathspro-profile-storage',

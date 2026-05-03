@@ -23,6 +23,7 @@ export default function Accueil() {
   const profiles = useProfileStore(state => state.profiles)
   const createProfile = useProfileStore(state => state.createProfile)
   const setActiveProfile = useProfileStore(state => state.setActiveProfile)
+  const ensureTeacherProfile = useProfileStore(state => state.ensureTeacherProfile)
   const navigate = useNavigate()
 
   const [isCreating, setIsCreating] = useState(false)
@@ -40,8 +41,9 @@ export default function Accueil() {
   const [pinError, setPinError] = useState('')
 
   useEffect(() => {
+    ensureTeacherProfile()
     setCurrentUrl(window.location.origin + window.location.pathname)
-  }, [])
+  }, [ensureTeacherProfile])
 
   const filteredProfiles = profiles.filter(p => !filterClasse || p.classe === filterClasse)
 
