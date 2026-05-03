@@ -34,14 +34,15 @@ export default function DashboardEnseignant() {
 
   // -- LOGIQUE ADMIN --
 
-  const handleAdminInit = async () => {
+  const handleAdminInit = async (optionalCode = null) => {
     try {
-      if (adminInput.length !== 6) {
-        setError("Le code doit comporter 6 chiffres.")
+      const codeToUse = optionalCode || adminInput
+      if (codeToUse.length < 4) {
+        setError("Le code doit comporter au moins 4 caractères.")
         return
       }
       const salt = generateSalt()
-      const hash = await hashString(adminInput, salt)
+      const hash = await hashString(codeToUse, salt)
       initAdminCode(hash, salt)
       setIsAdminLoggedIn(true)
       setAdminInput('')
@@ -153,12 +154,10 @@ export default function DashboardEnseignant() {
           <div className="space-y-4">
             <input 
               type="password"
-              inputMode="numeric"
-              maxLength={6}
               value={adminInput}
-              onChange={(e) => setAdminInput(e.target.value.replace(/\D/g, ''))}
-              placeholder="Code à 6 chiffres"
-              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-indigo-500 outline-none text-center font-black tracking-[1em] text-2xl bg-slate-50"
+              onChange={(e) => setAdminInput(e.target.value)}
+              placeholder="Mot de passe"
+              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-indigo-500 outline-none text-center font-black text-2xl bg-slate-50"
             />
             {error && <p className="text-red-500 font-bold text-sm">{error}</p>}
             <button 
@@ -186,13 +185,11 @@ export default function DashboardEnseignant() {
           <div className="space-y-4">
             <input 
               type="password"
-              inputMode="numeric"
-              maxLength={6}
               value={adminInput}
-              onChange={(e) => setAdminInput(e.target.value.replace(/\D/g, ''))}
-              placeholder="••••••"
+              onChange={(e) => setAdminInput(e.target.value)}
+              placeholder="••••••••"
               autoFocus
-              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-slate-500 outline-none text-center font-black tracking-[1em] text-2xl bg-slate-50"
+              className="w-full p-4 rounded-xl border-2 border-slate-200 focus:border-slate-500 outline-none text-center font-black text-2xl bg-slate-50"
               onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
             />
             {error && <p className="text-red-500 font-bold text-sm">{error}</p>}
@@ -239,6 +236,15 @@ export default function DashboardEnseignant() {
           <button onClick={handleGlobalReset} className="flex items-center justify-center gap-2 px-6 py-3 bg-red-50 border-2 border-red-100 text-red-600 hover:bg-red-100 rounded-2xl font-black shadow-sm transition-all active:scale-95">
              <AlertTriangle className="h-5 w-5" />
              Purger Tout
+          </button>
+          <button onClick={() => {
+            const newCode = window.prompt("Entrez le nouveau code maître :")
+            if (newCode && newCode.length >= 4) {
+              handleAdminInit(newCode) // Je vais adapter handleAdminInit pour accepter un paramètre
+              alert("Code maître mis à jour.")
+            }
+          }} className="p-3 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-colors" title="Modifier le code maître">
+             <Key className="h-5 w-5" />
           </button>
           <button onClick={() => setIsAdminLoggedIn(false)} className="p-3 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-colors" title="Se déconnecter">
              <LogOut className="h-5 w-5" />
