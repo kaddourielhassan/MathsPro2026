@@ -97,8 +97,13 @@ export default function Accueil() {
     }
 
     if (isValid) {
-      setActiveProfile(selectedProfileForPin.id)
-      navigate('/modules')
+      if (selectedProfileForPin.isTeacher) {
+        useProfileStore.getState().setAdminAuth(true, 'restricted')
+        navigate('/admin')
+      } else {
+        setActiveProfile(selectedProfileForPin.id)
+        navigate('/modules')
+      }
       setShowPinModal(false)
       setPinInput('')
       setPinError('')

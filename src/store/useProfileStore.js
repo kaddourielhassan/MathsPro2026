@@ -22,13 +22,16 @@ export const useProfileStore = create(
         }
       ],
       activeProfileId: null,
+      adminAuth: { isLoggedIn: false, role: null },
       adminSettings: {
         codeHash: null,
         codeSalt: null,
         isInitialized: false
       },
 
-      // Getters
+      // Getters & Setters
+      setAdminAuth: (isLoggedIn, role = null) => set({ adminAuth: { isLoggedIn, role } }),
+
       getActiveProfile: () => {
         const { profiles, activeProfileId } = get()
         return profiles.find(p => p.id === activeProfileId) || null

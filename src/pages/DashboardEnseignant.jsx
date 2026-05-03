@@ -18,9 +18,9 @@ export default function DashboardEnseignant() {
   const deleteProfile = useProfileStore(state => state.deleteProfile)
   const updateProfile = useProfileStore(state => state.updateProfile)
   const importFullState = useProfileStore(state => state.importFullState)
+  const adminAuth = useProfileStore(state => state.adminAuth)
+  const setAdminAuth = useProfileStore(state => state.setAdminAuth)
 
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false)
-  const [adminRole, setAdminRole] = useState(null) // 'full' ou 'restricted'
   const [adminInput, setAdminInput] = useState('')
   const [error, setError] = useState('')
   
@@ -46,7 +46,7 @@ export default function DashboardEnseignant() {
       const salt = generateSalt()
       const hash = await hashString(codeToUse, salt)
       initAdminCode(hash, salt)
-      setIsAdminLoggedIn(true)
+      setAdminAuth(true, 'full')
       setAdminInput('')
       setError('')
     } catch (err) {
@@ -65,8 +65,7 @@ export default function DashboardEnseignant() {
       // 1. Check Master Code (Full Access)
       const isMaster = await verifyHash(adminInput, adminSettings.codeSalt, adminSettings.codeHash)
       if (isMaster) {
-        setAdminRole('full')
-        setIsAdminLoggedIn(true)
+        setAdminAuth(true, 'full')
         setAdminInput('')
         setError('')
         return
@@ -75,8 +74,7 @@ export default function DashboardEnseignant() {
       // 2. Check Teacher Delegate Code (Current Year - Restricted Access)
       const currentYear = new Date().getFullYear().toString()
       if (adminInput === currentYear) {
-        setAdminRole('restricted')
-        setIsAdminLoggedIn(true)
+        setAdminAuth(true, 'restricted')
         setAdminInput('')
         setError('')
         return
@@ -189,10 +187,9 @@ export default function DashboardEnseignant() {
   }
 
   // Ecran de connexion
-  if (!isAdminLoggedIn) {
+  if (!adminAuth.isLoggedIn) {
     return (
-      <div className="max-w-md mx-auto py-20 px-4">
-        <div className="bg-white p-10 rounded-[2.5rem] border-2 border-slate-200 text-center space-y-6 shadow-xl">
+      <div className="max-w-md mx-auto mt-20 p-8 bg-white rounded-[2.5rem] shadow-xl border border-slate-100 text-center animate-in fade-in zoom-in duration-500">
           <div className="h-16 w-16 bg-slate-100 text-slate-600 rounded-2xl flex items-center justify-center mx-auto">
             <Lock className="h-8 w-8" />
           </div>
@@ -227,8 +224,8 @@ export default function DashboardEnseignant() {
       <div className="flex flex-col lg:flex-row justify-between lg:items-end mb-8 gap-4 px-2">
         <div>
            <div className="flex items-center gap-3 mb-1">
-             <span className={`text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${adminRole === 'full' ? 'bg-indigo-600' : 'bg-amber-500'}`}>
-               {adminRole === 'full' ? 'Administrateur' : 'Enseignant Délégué'}
+             <span className={`text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest ${adminAuth.role === 'full' ? 'bg-indigo-600' : 'bg-amber-500'}`}>
+               {adminAuth.role === 'full' ? 'Administrateur' : 'Enseignant Délégué'}
              </span>
              <h1 className="text-4xl font-black text-slate-900 tracking-tight">Espace Pédagogique</h1>
            </div>
@@ -246,7 +243,7 @@ export default function DashboardEnseignant() {
              CSV Global
           </button>
           
-          {adminRole === 'full' && (
+          {adminAuth.role === 'full' && (
             <>
               <label className="flex items-center justify-center gap-2 px-6 py-3 bg-white border-2 border-slate-100 text-slate-700 hover:border-slate-400 rounded-2xl font-black shadow-sm transition-all cursor-pointer active:scale-95" title="Restaurer une sauvegarde depuis un fichier">
                  <Upload className="h-5 w-5" />
@@ -270,7 +267,7 @@ export default function DashboardEnseignant() {
               </button>
             </>
           )}
-          <button onClick={() => setIsAdminLoggedIn(false)} className="p-3 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-colors" title="Se déconnecter">
+          <button onClick={() => setAdminAuth(false, null)} className="p-3 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-colors" title="Se déconnecter">
              <LogOut className="h-5 w-5" />
           </button>
         </div>
@@ -363,7 +360,7 @@ export default function DashboardEnseignant() {
                        </div>
                     </div>
 
-                    {adminRole === 'full' && (
+                    {adminAuth.role === 'full' && (
                       <div className="flex gap-2">
                         <button onClick={handleDeleteIndividual} className="p-4 bg-red-50 text-red-500 rounded-2xl hover:bg-red-100 transition-colors">
                           <Trash2 className="h-6 w-6" />
@@ -380,7 +377,7 @@ export default function DashboardEnseignant() {
                               <FileDown className="h-5 w-5" />
                               Bilan Pédagogique (PDF)
                            </button>
-                           {adminRole === 'full' && selectedProfile.pinHash && (
+                           {adminAuth.role === 'full' && selectedProfile.pinHash && (
                              <button onClick={handleResetPin} className="w-full py-3 border-2 border-indigo-200 text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 flex items-center justify-center gap-2 transition-all">
                                 <Key className="h-4 w-4" />
                                 Réinitialiser le PIN
